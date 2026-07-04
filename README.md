@@ -228,6 +228,21 @@ logscan/
 
 ---
 
+## API Endpoints
+
+All file operations use the `/api/v1` prefix. The legacy `/api/health` path is kept for backward-compatible health checks.
+
+| Method | Route | Description |
+|--------|-------|-------------|
+| GET | `/api/v1/health` | Health check |
+| POST | `/api/v1/files` | Create file metadata + get presigned upload URL |
+| POST | `/api/v1/files/{fileId}/confirm` | Confirm upload → trigger scan |
+| GET | `/api/v1/files` | List files for current owner |
+| GET | `/api/v1/files/{fileId}/result` | Get scan result |
+| GET | `/api/health` | Legacy health alias (still returns `{"status":"UP"}`) |
+
+---
+
 ## Local Development
 
 ### Frontend
@@ -299,7 +314,11 @@ The deploy script will:
 After deployment:
 
 ```bash
-# API health check
+# API health check (versioned)
+curl https://YOUR-API-ID.execute-api.ap-southeast-1.amazonaws.com/api/v1/health
+# Expected: {"status":"UP"}
+
+# Legacy health check (also works)
 curl https://YOUR-API-ID.execute-api.ap-southeast-1.amazonaws.com/api/health
 # Expected: {"status":"UP"}
 
@@ -308,7 +327,7 @@ curl -I http://your-domain.example.com
 # Expected: HTTP/1.1 200 OK, Server: AmazonS3
 
 # CORS preflight
-curl -i -X OPTIONS "https://YOUR-API-ID.execute-api.ap-southeast-1.amazonaws.com/api/files" \
+curl -i -X OPTIONS "https://YOUR-API-ID.execute-api.ap-southeast-1.amazonaws.com/api/v1/files" \
   -H "Origin: http://your-domain.example.com" \
   -H "Access-Control-Request-Method: POST" \
   -H "Access-Control-Request-Headers: content-type"

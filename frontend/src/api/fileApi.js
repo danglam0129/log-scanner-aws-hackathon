@@ -1,6 +1,7 @@
 import { getAccessToken } from '../auth';
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
+const API_PREFIX = `${BASE_URL}/v1`;
 
 function getHeaders() {
   const headers = { 'Content-Type': 'application/json' };
@@ -23,7 +24,7 @@ async function handleResponse(response) {
 }
 
 export async function requestUpload(fileName, fileSize) {
-  const response = await fetch(`${BASE_URL}/files`, {
+  const response = await fetch(`${API_PREFIX}/files`, {
     method: 'POST',
     headers: getHeaders(),
     body: JSON.stringify({ fileName, fileSize }),
@@ -32,7 +33,7 @@ export async function requestUpload(fileName, fileSize) {
 }
 
 export async function confirmUpload(fileId) {
-  const response = await fetch(`${BASE_URL}/files/${fileId}/confirm`, {
+  const response = await fetch(`${API_PREFIX}/files/${fileId}/confirm`, {
     method: 'POST',
     headers: getHeaders(),
   });
@@ -40,7 +41,7 @@ export async function confirmUpload(fileId) {
 }
 
 export async function getFiles() {
-  const response = await fetch(`${BASE_URL}/files`, {
+  const response = await fetch(`${API_PREFIX}/files`, {
     method: 'GET',
     headers: getHeaders(),
   });
@@ -48,7 +49,7 @@ export async function getFiles() {
 }
 
 export async function getScanResult(fileId) {
-  const response = await fetch(`${BASE_URL}/files/${fileId}/result`, {
+  const response = await fetch(`${API_PREFIX}/files/${fileId}/result`, {
     method: 'GET',
     headers: getHeaders(),
   });

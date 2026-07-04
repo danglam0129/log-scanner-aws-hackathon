@@ -45,26 +45,27 @@ public class ApiHandler implements RequestHandler<APIGatewayV2HTTPEvent, APIGate
         Map<String, String> pathParams = event.getPathParameters();
 
         try {
-            if ("GET".equals(method) && "/api/health".equals(path)) {
+            // Health check — versioned + legacy alias
+            if ("GET".equals(method) && ("/api/v1/health".equals(path) || "/api/health".equals(path))) {
                 return ok(Map.of("status", "UP"));
             }
 
             String ownerUserId = resolveOwner(event);
 
-            if ("POST".equals(method) && "/api/files".equals(path)) {
+            if ("POST".equals(method) && "/api/v1/files".equals(path)) {
                 return handleCreateFile(event, ownerUserId);
             }
 
-            if ("POST".equals(method) && path.matches("/api/files/[^/]+/confirm")) {
+            if ("POST".equals(method) && path.matches("/api/v1/files/[^/]+/confirm")) {
                 String fileId = pathParams != null ? pathParams.get("fileId") : null;
                 return handleConfirmUpload(fileId, ownerUserId);
             }
 
-            if ("GET".equals(method) && "/api/files".equals(path)) {
+            if ("GET".equals(method) && "/api/v1/files".equals(path)) {
                 return handleListFiles(ownerUserId);
             }
 
-            if ("GET".equals(method) && path.matches("/api/files/[^/]+/result")) {
+            if ("GET".equals(method) && path.matches("/api/v1/files/[^/]+/result")) {
                 String fileId = pathParams != null ? pathParams.get("fileId") : null;
                 return handleGetResult(fileId, ownerUserId);
             }

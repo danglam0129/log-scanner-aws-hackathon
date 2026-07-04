@@ -59,12 +59,20 @@ class ApiHandlerTest {
 
     @Test
     void healthEndpointReturnsUp() throws Exception {
-        // ApiHandler depends on env vars for TABLE_NAME etc. We test the routing logic
-        // by observing that health doesn't need DynamoDB
+        ApiHandler handler = new ApiHandler();
+        var event = buildEvent("GET", "/api/v1/health", null, null);
+
+        APIGatewayV2HTTPResponse response = handler.handleRequest(event, mockContext);
+
+        assertEquals(200, response.getStatusCode());
+        assertTrue(response.getBody().contains("\"status\":\"UP\""));
+    }
+
+    @Test
+    void legacyHealthEndpointStillWorks() throws Exception {
         ApiHandler handler = new ApiHandler();
         var event = buildEvent("GET", "/api/health", null, null);
 
-        // This will work because health endpoint doesn't touch DynamoDB
         APIGatewayV2HTTPResponse response = handler.handleRequest(event, mockContext);
 
         assertEquals(200, response.getStatusCode());
@@ -83,13 +91,23 @@ class ApiHandlerTest {
     }
 
     @Test
-    void createFileValidatesFileName() {
+    void legacyFileRouteReturns404() {
         ApiHandler handler = new ApiHandler();
-        var event = buildEvent("POST", "/api/files", "{\"fileSize\":100}", null);
+        var event = buildEvent("POST", "/api/files", "{\"fileName\":\"test.log\",\"fileSize\":100}", null);
 
         APIGatewayV2HTTPResponse response = handler.handleRequest(event, mockContext);
 
-        // Should fail validation — missing fileName
+        assertEquals(404, response.getStatusCode());
+        assertTrue(response.getBody().contains("NOT_FOUND"));
+    }
+
+    @Test
+    void createFileValidatesFileName() {
+        ApiHandler handler = new ApiHandler();
+        var event = buildEvent("POST", "/api/v1/files", "{\"fileSize\":100}", null);
+
+        APIGatewayV2HTTPResponse response = handler.handleRequest(event, mockContext);
+
         assertEquals(400, response.getStatusCode());
         assertTrue(response.getBody().contains("FILE_NAME_REQUIRED"));
     }
@@ -97,8 +115,7 @@ class ApiHandlerTest {
     @Test
     void createFileValidatesFileSize() {
         ApiHandler handler = new ApiHandler();
-        // File too large (> 10 MB)
-        var event = buildEvent("POST", "/api/files", "{\"fileName\":\"test.log\",\"fileSize\":11000000}", null);
+        var event = buildEvent("POST", "/api/v1/files", "{\"fileName\":\"test.log\",\"fileSize\":11000000}", null);
 
         APIGatewayV2HTTPResponse response = handler.handleRequest(event, mockContext);
 
@@ -109,7 +126,7 @@ class ApiHandlerTest {
     @Test
     void createFileValidatesFileSizeZero() {
         ApiHandler handler = new ApiHandler();
-        var event = buildEvent("POST", "/api/files", "{\"fileName\":\"test.log\",\"fileSize\":0}", null);
+        var event = buildEvent("POST", "/api/v1/files", "{\"fileName\":\"test.log\",\"fileSize\":0}", null);
 
         APIGatewayV2HTTPResponse response = handler.handleRequest(event, mockContext);
 
@@ -119,19 +136,17 @@ class ApiHandlerTest {
 
     @Test
     void ownerResolutionDefaultsToAnonymous() throws Exception {
-        // When no authorizer is present, should default to "anonymous"
         ApiHandler handler = new ApiHandler();
-        var event = buildEvent("GET", "/api/health", null, null);
+        var event = buildEvent("GET", "/api/v1/health", null, null);
 
         APIGatewayV2HTTPResponse response = handler.handleRequest(event, mockContext);
-        // Just verify it doesn't crash — owner resolution is internal
         assertEquals(200, response.getStatusCode());
     }
 
     @Test
     void responseIncludesCorsHeaders() throws Exception {
         ApiHandler handler = new ApiHandler();
-        var event = buildEvent("GET", "/api/health", null, null);
+        var event = buildEvent("GET", "/api/v1/health", null, null);
 
         APIGatewayV2HTTPResponse response = handler.handleRequest(event, mockContext);
 

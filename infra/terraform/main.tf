@@ -392,15 +392,21 @@ resource "aws_apigatewayv2_integration" "api_lambda" {
   payload_format_version = "2.0"
 }
 
-resource "aws_apigatewayv2_route" "health" {
+resource "aws_apigatewayv2_route" "health_legacy" {
   api_id    = aws_apigatewayv2_api.api.id
   route_key = "GET /api/health"
   target    = "integrations/${aws_apigatewayv2_integration.api_lambda.id}"
 }
 
+resource "aws_apigatewayv2_route" "health_v1" {
+  api_id    = aws_apigatewayv2_api.api.id
+  route_key = "GET /api/v1/health"
+  target    = "integrations/${aws_apigatewayv2_integration.api_lambda.id}"
+}
+
 resource "aws_apigatewayv2_route" "create_file" {
   api_id             = aws_apigatewayv2_api.api.id
-  route_key          = "POST /api/files"
+  route_key          = "POST /api/v1/files"
   target             = "integrations/${aws_apigatewayv2_integration.api_lambda.id}"
   authorization_type = var.enable_cognito ? "JWT" : "NONE"
   authorizer_id      = var.enable_cognito ? aws_apigatewayv2_authorizer.cognito[0].id : null
@@ -408,7 +414,7 @@ resource "aws_apigatewayv2_route" "create_file" {
 
 resource "aws_apigatewayv2_route" "confirm_file" {
   api_id             = aws_apigatewayv2_api.api.id
-  route_key          = "POST /api/files/{fileId}/confirm"
+  route_key          = "POST /api/v1/files/{fileId}/confirm"
   target             = "integrations/${aws_apigatewayv2_integration.api_lambda.id}"
   authorization_type = var.enable_cognito ? "JWT" : "NONE"
   authorizer_id      = var.enable_cognito ? aws_apigatewayv2_authorizer.cognito[0].id : null
@@ -416,7 +422,7 @@ resource "aws_apigatewayv2_route" "confirm_file" {
 
 resource "aws_apigatewayv2_route" "list_files" {
   api_id             = aws_apigatewayv2_api.api.id
-  route_key          = "GET /api/files"
+  route_key          = "GET /api/v1/files"
   target             = "integrations/${aws_apigatewayv2_integration.api_lambda.id}"
   authorization_type = var.enable_cognito ? "JWT" : "NONE"
   authorizer_id      = var.enable_cognito ? aws_apigatewayv2_authorizer.cognito[0].id : null
@@ -424,7 +430,7 @@ resource "aws_apigatewayv2_route" "list_files" {
 
 resource "aws_apigatewayv2_route" "get_result" {
   api_id             = aws_apigatewayv2_api.api.id
-  route_key          = "GET /api/files/{fileId}/result"
+  route_key          = "GET /api/v1/files/{fileId}/result"
   target             = "integrations/${aws_apigatewayv2_integration.api_lambda.id}"
   authorization_type = var.enable_cognito ? "JWT" : "NONE"
   authorizer_id      = var.enable_cognito ? aws_apigatewayv2_authorizer.cognito[0].id : null

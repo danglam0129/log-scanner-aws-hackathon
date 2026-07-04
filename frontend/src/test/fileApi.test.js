@@ -25,7 +25,7 @@ describe('fileApi', () => {
   });
 
   describe('requestUpload', () => {
-    it('sends POST /api/files with fileName and fileSize', async () => {
+    it('sends POST /api/v1/files with fileName and fileSize', async () => {
       global.fetch.mockResolvedValue({
         ok: true,
         json: () => Promise.resolve({ fileId: 'abc', uploadUrl: 'https://s3/url', expiresIn: 900 }),
@@ -34,7 +34,7 @@ describe('fileApi', () => {
       const result = await fileApi.requestUpload('test.log', 5000);
 
       expect(global.fetch).toHaveBeenCalledWith(
-        '/api/files',
+        '/api/v1/files',
         expect.objectContaining({
           method: 'POST',
           body: JSON.stringify({ fileName: 'test.log', fileSize: 5000 }),
@@ -55,27 +55,27 @@ describe('fileApi', () => {
   });
 
   describe('confirmUpload', () => {
-    it('sends POST /api/files/{fileId}/confirm', async () => {
+    it('sends POST /api/v1/files/{fileId}/confirm', async () => {
       global.fetch.mockResolvedValue({
         ok: true,
         json: () => Promise.resolve({ fileId: 'abc', status: 'PENDING' }),
       });
 
       const result = await fileApi.confirmUpload('abc');
-      expect(global.fetch).toHaveBeenCalledWith('/api/files/abc/confirm', expect.objectContaining({ method: 'POST' }));
+      expect(global.fetch).toHaveBeenCalledWith('/api/v1/files/abc/confirm', expect.objectContaining({ method: 'POST' }));
       expect(result.status).toBe('PENDING');
     });
   });
 
   describe('getFiles', () => {
-    it('sends GET /api/files', async () => {
+    it('sends GET /api/v1/files', async () => {
       global.fetch.mockResolvedValue({
         ok: true,
         json: () => Promise.resolve({ files: [{ fileId: '1' }] }),
       });
 
       const result = await fileApi.getFiles();
-      expect(global.fetch).toHaveBeenCalledWith('/api/files', expect.objectContaining({ method: 'GET' }));
+      expect(global.fetch).toHaveBeenCalledWith('/api/v1/files', expect.objectContaining({ method: 'GET' }));
       expect(result.files).toHaveLength(1);
     });
 
@@ -91,14 +91,14 @@ describe('fileApi', () => {
   });
 
   describe('getScanResult', () => {
-    it('sends GET /api/files/{fileId}/result', async () => {
+    it('sends GET /api/v1/files/{fileId}/result', async () => {
       global.fetch.mockResolvedValue({
         ok: true,
         json: () => Promise.resolve({ fileId: 'abc', scanResult: { threatLevel: 'NONE' } }),
       });
 
       const result = await fileApi.getScanResult('abc');
-      expect(global.fetch).toHaveBeenCalledWith('/api/files/abc/result', expect.objectContaining({ method: 'GET' }));
+      expect(global.fetch).toHaveBeenCalledWith('/api/v1/files/abc/result', expect.objectContaining({ method: 'GET' }));
       expect(result.scanResult.threatLevel).toBe('NONE');
     });
 
