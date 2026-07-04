@@ -19,18 +19,43 @@ A serverless log threat detection web application. Upload log files through a br
 
 ```mermaid
 flowchart LR
-    User["Browser"] --> FE["React/Vite Frontend<br/>S3 Static Website"]
-    FE -->|REST API calls| APIGW["API Gateway<br/>HTTP API"]
-    FE -->|Direct PUT upload| S3["S3 Upload Bucket<br/>(Private)"]
-    APIGW --> API["API Lambda<br/>Java 21"]
-    API -->|Create/Query records| DDB["DynamoDB<br/>(On-Demand)"]
-    API -->|Generate presigned URL| S3
-    S3 -->|ObjectCreated event| SQS["SQS Queue"]
-    SQS --> Scanner["Scanner Lambda<br/>Java 21"]
-    SQS --> DLQ["Dead-Letter Queue"]
-    Scanner -->|Download object| S3
+    subgraph Client
+        Browser["🌐 Browser"]
+    end
+
+    subgraph API Layer
+        FE["S3 Frontend<br/>React/Vite"]
+        APIGW["API Gateway<br/>HTTP API"]
+        API["API Lambda<br/>Java 21"]
+    end
+
+    subgraph Storage & Queue
+        S3["S3 Upload Bucket<br/>(Private)"]
+        SQS["SQS Queue"]
+        DLQ["Dead-Letter Queue"]
+    end
+
+    subgraph Processing
+        Scanner["Scanner Lambda<br/>Java 21"]
+    end
+
+    subgraph Data & AI
+        DDB["DynamoDB<br/>(On-Demand)"]
+        Bedrock["Amazon Bedrock"]
+    end
+
+    Browser --> FE
+    Browser -->|REST calls| APIGW
+    APIGW --> API
+    API -->|Read/Write| DDB
+    API -->|Presigned URL| S3
+    Browser -->|Direct PUT| S3
+    S3 -->|ObjectCreated| SQS
+    SQS --> Scanner
+    SQS --> DLQ
+    Scanner -->|Download| S3
     Scanner -->|Save result| DDB
-    Scanner -.->|Optional| Bedrock["Amazon Bedrock"]
+    Scanner -.->|Optional| Bedrock
 ```
 
 **Request flow:**
