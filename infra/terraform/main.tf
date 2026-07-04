@@ -169,6 +169,18 @@ resource "aws_dynamodb_table" "files" {
     type = "S"
   }
 
+  attribute {
+    name = "uploadedAt"
+    type = "S"
+  }
+
+  global_secondary_index {
+    name            = "ownerUploadedAtIndex"
+    hash_key        = "ownerUserId"
+    range_key       = "uploadedAt"
+    projection_type = "ALL"
+  }
+
   server_side_encryption {
     enabled = true
   }
@@ -217,7 +229,10 @@ resource "aws_iam_role_policy" "api_lambda" {
           "dynamodb:Query",
           "dynamodb:UpdateItem"
         ]
-        Resource = aws_dynamodb_table.files.arn
+        Resource = [
+          aws_dynamodb_table.files.arn,
+          "${aws_dynamodb_table.files.arn}/index/*"
+        ]
       },
       {
         Effect   = "Allow"
