@@ -44,7 +44,8 @@
   - Routes: `/` → `FileList`, `/upload` → `FileUpload`, `/files/:fileId/result` → `ScanResultDetail`.
   - Layout: Sticky top nav (brand "LogScan", links "Files" and "Upload"), main content max-width ~1100px centered, footer text "Log Threat Detection System • Built with React, API Gateway, Lambda, S3, SQS, and DynamoDB".
   - Dark security-dashboard theme via plain CSS or inline styles.
-  - Expected: All three routes render placeholder content without errors.
+  - Cognito integration: calls `handleAuthCallback()` on load, shows login/logout when configured, wraps routes in `<ProtectedRoute>`.
+  - Expected: All three routes render placeholder content without errors. Anonymous mode works when Cognito is disabled.
 
 - [x] 10. Create `frontend/src/main.jsx` mounting `<App />` with `BrowserRouter`.
   - File: `frontend/src/main.jsx`
@@ -194,14 +195,15 @@
   - Environment variables read: `FILES_TABLE_NAME`, `DETECTOR_TYPE`, `BEDROCK_MODEL_ID`.
   - Does NOT require `S3_BUCKET_NAME` — bucket name is extracted from the S3 event payload.
   - Processing per SQS record:
-    - Parse S3 event JSON from record body → extract bucket name and key.
-    - URL-decode key.
+    - Parse S3 event JSON from record body.
+    - Iterate ALL `Records[]` in the S3 event (not just the first).
+    - For each S3 record: extract bucket name and key, URL-decode key.
     - Ignore keys not starting with `uploads/`.
     - Parse key: `uploads/{ownerUserId}/{fileId}/{fileName}`.
     - Lookup DynamoDB item by ownerUserId + fileId.
     - If not found: log warning, skip.
     - If status == COMPLETED: skip (idempotent).
-    - Download S3 object as UTF-8 string.
+    - Download S3 object as UTF-8 string (try-with-resources to close InputStream).
     - Instantiate detector: if `DETECTOR_TYPE == "BEDROCK"` → `BedrockThreatDetector`, else → `MockThreatDetector`.
     - Call `detector.analyze(content)`.
     - Update DynamoDB: status=COMPLETED, threatLevel, summary, findingsJson (serialized), scannedAt, updatedAt.
@@ -342,7 +344,7 @@
 
 - [x] 37. Write complete root `README.md`.
   - File: `README.md`
-  - Sections: project overview, architecture mermaid diagram, why DynamoDB (not RDS), authentication + file ownership, AWS account limitations (CloudFront unverified, Bedrock unapproved), default feature flags, tech stack table, project structure, deploy commands, API table, test commands, secret safety notes, frontend URL format (`http://log-scanner.cloudival.com`).
+  - Sections: project overview, architecture mermaid diagram, why DynamoDB (not RDS), authentication + file ownership (clarifies per-user isolation only with Cognito), AWS account limitations (CloudFront unverified, Bedrock unapproved), default feature flags, tech stack table, project structure, deploy commands, API table, test commands, secret safety notes, frontend URL format (`http://log-scanner.cloudival.com`).
 
 - [x] 38. Write `infra/terraform/README.md`.
   - File: `infra/terraform/README.md`
@@ -350,38 +352,108 @@
 
 ---
 
+## Phase 12b: Pre-Deployment Review Fixes
+
+- [x] 39a. Make Cognito integration usable in React app.
+  - File: `frontend/src/App.jsx`
+  - Changes:
+    - Call `handleAuthCallback()` on app load when `code` query param is present.
+    - Show login/logout controls in nav when Cognito env vars are configured.
+    - Wrap file list/upload/result routes in `<ProtectedRoute>` — blocks access when Cognito is enabled but user is not authenticated.
+    - Anonymous mode works only when Cognito is disabled (`isAuthConfigured() === false`).
+  - Expected: App builds, tests pass.
+
+- [x] 39b. Fix Terraform S3 frontend bucket public access block.
+  - File: `infra/terraform/main.tf`
+  - Changes:
+    - Always create `aws_s3_bucket_public_access_block` for frontend bucket (no `count`).
+    - When `enable_cloudfront = false`: set all block values to `false` (allow public access).
+    - When `enable_cloudfront = true`: set all block values to `true` (private, CF only).
+    - Added `depends_on` to bucket policy resource.
+  - Expected: `terraform validate` passes.
+
+- [x] 39c. Fix Route53 alias for S3 website hosting.
+  - File: `infra/terraform/main.tf`
+  - Change: Use `aws_s3_bucket_website_configuration.frontend.website_domain` as the alias name (was `website_endpoint`).
+  - Expected: `terraform validate` passes.
+
+- [x] 39d. Fix ThreatDetectionHandler to process all S3 Records.
+  - File: `lambda/src/main/java/com/logscan/lambda/ThreatDetectionHandler.java`
+  - Changes:
+    - Iterate all `Records[]` in the S3 event JSON (not just `records[0]`).
+    - Extracted `processS3Object(bucket, key, context)` method.
+    - Use try-with-resources for S3 object InputStream.
+  - Expected: `mvn compile` succeeds.
+
+- [x] 39e. Add unit tests for ApiHandler routes and ownership.
+  - File: `lambda/src/test/java/com/logscan/lambda/ApiHandlerTest.java`
+  - Tests (7):
+    - Health endpoint returns UP.
+    - Unknown route returns 404.
+    - Create file validates missing fileName.
+    - Create file validates fileSize > 10 MB.
+    - Create file validates fileSize = 0.
+    - Owner resolution defaults to anonymous.
+    - Response includes CORS headers.
+  - Expected: `mvn test` → BUILD SUCCESS.
+
+- [x] 39f. Add unit tests for ThreatDetectionHandler with multi-record events.
+  - File: `lambda/src/test/java/com/logscan/lambda/ThreatDetectionHandlerTest.java`
+  - Tests (5):
+    - Processes S3 object successfully.
+    - Skips already COMPLETED items (idempotent).
+    - Skips keys not under `uploads/`.
+    - Processes multiple S3 records in one event.
+    - Skips records with no DynamoDB metadata.
+  - Expected: `mvn test` → BUILD SUCCESS.
+
+- [x] 39g. Remove account-specific values from terraform.tfvars.example.
+  - File: `infra/terraform/terraform.tfvars.example`
+  - Change: Replaced real zone ID and domain with generic placeholders (`YOUR_ROUTE53_ZONE_ID`, `your-domain.example.com`).
+
+- [x] 39h. Run all validation commands.
+  - Commands:
+    - `cd frontend && npm test -- --run` → 3 files, 25 tests pass.
+    - `cd frontend && npm run build` → dist/ generated.
+    - `cd lambda && mvn test` → 22 tests, BUILD SUCCESS.
+    - `cd infra/terraform && terraform fmt -check -recursive` → no issues.
+    - `cd infra/terraform && terraform validate` → "Success! The configuration is valid."
+  - Expected: All green.
+
+---
+
 ## Phase 13: Deployment and Verification
 
-- [ ] 39. Build Lambda JAR locally.
+- [x] 39. Build Lambda JAR locally.
   - Command: `cd lambda && mvn clean package -DskipTests`
   - Expected: `lambda/target/*.jar` exists, BUILD SUCCESS.
 
-- [ ] 40. Build frontend locally.
+- [x] 40. Build frontend locally.
   - Command: `cd frontend && npm ci && npm run build`
   - Expected: `frontend/dist/` contains index.html and assets.
 
-- [ ] 41. Run `terraform fmt -check` and `terraform validate`.
+- [x] 41. Run `terraform fmt -check` and `terraform validate`.
   - Commands: `cd infra/terraform && terraform fmt -check && terraform validate`
   - Expected: No formatting issues, "Success! The configuration is valid."
 
-- [ ] 42. Deploy with `deploy.sh` (requires AWS credentials and terraform.tfvars).
+- [x] 42. Deploy with `deploy.sh` (requires AWS credentials and terraform.tfvars).
   - Command: `cd infra/terraform && ./deploy.sh`
   - Expected: Terraform applies without errors; frontend synced to S3.
 
-- [ ] 43. Verify Terraform outputs.
+- [x] 43. Verify Terraform outputs.
   - Commands:
     - `terraform output -raw frontend_url` → `http://log-scanner.cloudival.com`
     - `terraform output -raw api_url` → ends with `/api`
 
-- [ ] 44. Verify API health endpoint.
+- [x] 44. Verify API health endpoint.
   - Command: `curl "$(terraform output -raw api_url)/health"`
   - Expected: `{"status":"UP"}`
 
-- [ ] 45. Verify frontend is served from S3.
+- [x] 45. Verify frontend is served from S3.
   - Command: `curl -I http://log-scanner.cloudival.com`
   - Expected: `HTTP/1.1 200 OK`, `Server: AmazonS3`
 
-- [ ] 46. Verify CORS preflight.
+- [x] 46. Verify CORS preflight.
   - Command:
     ```bash
     curl -i -X OPTIONS "$(terraform output -raw api_url)/files" \
@@ -391,7 +463,7 @@
     ```
   - Expected: `access-control-allow-origin: http://log-scanner.cloudival.com`
 
-- [ ] 47. Verify end-to-end flow.
+- [x] 47. Verify end-to-end flow.
   - Steps:
     1. `POST /api/files` with `{"fileName":"test.log","fileSize":100}` → get `fileId` + `uploadUrl`.
     2. PUT a test file to the `uploadUrl` with `Content-Type: application/octet-stream`.
@@ -400,6 +472,6 @@
     5. `GET /api/files/{fileId}/result` → returns `scanResult` JSON object.
   - Expected: DynamoDB item status = COMPLETED, scanResult contains threatLevel and findings.
 
-- [ ] 48. Verify `terraform plan` shows no changes (idempotent).
+- [x] 48. Verify `terraform plan` shows no changes (idempotent).
   - Command: `cd infra/terraform && terraform plan`
   - Expected: "No changes. Your infrastructure matches the configuration."

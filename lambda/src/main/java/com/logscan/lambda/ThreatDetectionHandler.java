@@ -62,25 +62,35 @@ public class ThreatDetectionHandler implements RequestHandler<SQSEvent, Void> {
     }
 
     private void processMessage(SQSEvent.SQSMessage message, Context context) {
-        String bucketName;
-        String objectKey;
-
+        JsonNode records;
         try {
             JsonNode s3Event = MAPPER.readTree(message.getBody());
-            JsonNode records = s3Event.get("Records");
+            records = s3Event.get("Records");
             if (records == null || records.isEmpty()) {
                 context.getLogger().log("No S3 records in SQS message, skipping.");
                 return;
             }
-
-            JsonNode record = records.get(0);
-            bucketName = record.at("/s3/bucket/name").asText();
-            objectKey = URLDecoder.decode(record.at("/s3/object/key").asText(), StandardCharsets.UTF_8);
         } catch (Exception e) {
             context.getLogger().log("Failed to parse S3 event: " + e.getMessage());
             throw new RuntimeException("Failed to parse S3 event", e);
         }
 
+        // Process ALL S3 records in the event
+        for (int i = 0; i < records.size(); i++) {
+            JsonNode record = records.get(i);
+            String bucketName = record.at("/s3/bucket/name").asText();
+            String objectKey;
+            try {
+                objectKey = URLDecoder.decode(record.at("/s3/object/key").asText(), StandardCharsets.UTF_8);
+            } catch (Exception e) {
+                context.getLogger().log("Failed to decode key for record " + i + ": " + e.getMessage());
+                continue;
+            }
+            processS3Object(bucketName, objectKey, context);
+        }
+    }
+
+    private void processS3Object(String bucketName, String objectKey, Context context) {
         if (!objectKey.startsWith("uploads/")) {
             context.getLogger().log("Ignoring key not under uploads/: " + objectKey);
             return;
@@ -119,13 +129,14 @@ public class ThreatDetectionHandler implements RequestHandler<SQSEvent, Void> {
         }
 
         try {
-            // Download file
-            InputStream inputStream = s3Client.getObject(GetObjectRequest.builder()
+            // Download file with try-with-resources
+            String content;
+            try (InputStream inputStream = s3Client.getObject(GetObjectRequest.builder()
                     .bucket(bucketName)
                     .key(objectKey)
-                    .build());
-
-            String content = new String(inputStream.readAllBytes(), StandardCharsets.UTF_8);
+                    .build())) {
+                content = new String(inputStream.readAllBytes(), StandardCharsets.UTF_8);
+            }
 
             // Analyze
             ScanResult result = detector.analyze(content);

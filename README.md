@@ -30,9 +30,10 @@ flowchart LR
 ## Authentication & File Ownership
 
 - Every file is scoped by `ownerUserId` (DynamoDB partition key).
-- When Cognito is enabled: `ownerUserId` = Cognito JWT `sub` claim.
-- When Cognito is disabled (default): `ownerUserId` = `"anonymous"`.
-- All API operations are scoped by owner — users cannot access each other's files.
+- When Cognito is enabled: `ownerUserId` = Cognito JWT `sub` claim. Each user sees only their own files.
+- When Cognito is disabled (default): `ownerUserId` = `"anonymous"`. All users share the same view — there is no per-user isolation in anonymous mode.
+- Per-user file isolation only works when Cognito is enabled (`enable_cognito = true`).
+- The React frontend automatically shows login/logout controls and protects views when Cognito env vars are configured.
 
 ## AWS Account Limitations
 

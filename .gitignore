@@ -1,37 +1,54 @@
-# Lambda build artifacts
-lambda/target/
-
-# Frontend build artifacts
-frontend/dist/
-frontend/node_modules/
-
-# IDE
-.idea/
-*.iml
-.vscode/
-
-# OS
-.DS_Store
-Thumbs.db
-
-# Environment files
-.env
-*.env.local
-
-# Terraform
+# ─── Terraform ────────────────────────────────────────────────────────────────
 *.tfvars
 *.tfvars.json
-infra/terraform/.terraform/
-infra/terraform/*.tfstate
-infra/terraform/*.tfstate.backup
+**/.terraform/
+**/*.tfstate
+**/*.tfstate.backup
+crash.log
+crash.*.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+# .terraform.lock.hcl is committed intentionally for reproducible provider versions
 
-# Secrets
+# ─── AWS credentials and secrets ─────────────────────────────────────────────
+.aws/
+aws-credentials*
+credentials
+config
 *.pem
 *.key
 *.p12
 *.crt
-aws-credentials*
+*.cer
 
-# Logs
+# ─── Environment files ───────────────────────────────────────────────────────
+.env
+.env.*
+!.env.example
+frontend/.env
+frontend/.env.*
+!frontend/.env.example
+
+# ─── Frontend generated files ────────────────────────────────────────────────
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+
+# ─── Lambda / Maven generated files ─────────────────────────────────────────
+lambda/target/
+**/target/
+
+# ─── IDE ─────────────────────────────────────────────────────────────────────
+.idea/
+.vscode/
+*.iml
+
+# ─── OS ──────────────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+
+# ─── Logs ────────────────────────────────────────────────────────────────────
 *.log
 logs/

@@ -67,12 +67,11 @@ resource "aws_s3_bucket_website_configuration" "frontend" {
 }
 
 resource "aws_s3_bucket_public_access_block" "frontend" {
-  count                   = var.enable_cloudfront ? 1 : 0
   bucket                  = aws_s3_bucket.frontend.id
-  block_public_acls       = true
-  block_public_policy     = true
-  ignore_public_acls      = true
-  restrict_public_buckets = true
+  block_public_acls       = var.enable_cloudfront
+  block_public_policy     = var.enable_cloudfront
+  ignore_public_acls      = var.enable_cloudfront
+  restrict_public_buckets = var.enable_cloudfront
 }
 
 resource "aws_s3_bucket_policy" "frontend_public" {
@@ -91,6 +90,8 @@ resource "aws_s3_bucket_policy" "frontend_public" {
       }
     ]
   })
+
+  depends_on = [aws_s3_bucket_public_access_block.frontend]
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -454,7 +455,7 @@ resource "aws_route53_record" "frontend_s3" {
   type    = "A"
 
   alias {
-    name                   = aws_s3_bucket_website_configuration.frontend.website_endpoint
+    name                   = aws_s3_bucket_website_configuration.frontend.website_domain
     zone_id                = "Z3O0J2DXBE1FTB" # S3 website hosted zone ID for ap-southeast-1
     evaluate_target_health = false
   }
