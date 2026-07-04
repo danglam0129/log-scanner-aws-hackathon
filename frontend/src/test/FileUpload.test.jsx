@@ -27,7 +27,7 @@ describe('FileUpload', () => {
 
   it('renders drag and drop zone', () => {
     renderUpload();
-    expect(screen.getByText(/drag & drop/i)).toBeInTheDocument();
+    expect(screen.getByText(/drag & drop a log file here/i)).toBeInTheDocument();
   });
 
   it('rejects files larger than 10 MB', async () => {
@@ -58,10 +58,7 @@ describe('FileUpload', () => {
 
     fireEvent.change(input, { target: { files: [validFile] } });
     expect(screen.getByText(/app.log/)).toBeInTheDocument();
-    // Upload button appears (not the heading)
-    const buttons = screen.getAllByRole('button');
-    const uploadBtn = buttons.find(b => b.tagName === 'BUTTON' && b.textContent === 'Upload');
-    expect(uploadBtn).toBeTruthy();
+    expect(screen.getByText(/Start Upload/i)).toBeInTheDocument();
   });
 
   it('handles successful upload flow', async () => {
@@ -75,7 +72,7 @@ describe('FileUpload', () => {
     Object.defineProperty(file, 'size', { value: 100 });
 
     fireEvent.change(input, { target: { files: [file] } });
-    fireEvent.click(screen.getByText('Upload'));
+    fireEvent.click(screen.getByText(/Start Upload/i));
 
     await waitFor(() => {
       expect(screen.getByText(/uploaded successfully/i)).toBeInTheDocument();
@@ -95,7 +92,7 @@ describe('FileUpload', () => {
     Object.defineProperty(file, 'size', { value: 50 });
 
     fireEvent.change(input, { target: { files: [file] } });
-    fireEvent.click(screen.getByText('Upload'));
+    fireEvent.click(screen.getByText(/Start Upload/i));
 
     await waitFor(() => {
       expect(screen.getByText(/network error/i)).toBeInTheDocument();

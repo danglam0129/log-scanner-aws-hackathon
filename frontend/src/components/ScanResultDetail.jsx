@@ -2,30 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { getScanResult } from '../api/fileApi';
 
-const threatColors = {
-  NONE: '#66bb6a',
-  LOW: '#81c784',
-  MEDIUM: '#ffa726',
-  HIGH: '#ff7043',
-  CRITICAL: '#ef5350',
-};
-
-const badgeStyle = (level) => ({
-  display: 'inline-block',
-  padding: '4px 12px',
-  borderRadius: '4px',
-  background: threatColors[level] || '#607d8b',
-  color: '#fff',
-  fontWeight: 700,
-  fontSize: '0.85rem',
-});
-
-const findingStyle = {
-  padding: '16px',
-  background: '#1e3a5f',
-  borderRadius: '8px',
-  marginBottom: '12px',
-};
+function getThreatClass(level) {
+  return (level || 'none').toLowerCase();
+}
 
 export default function ScanResultDetail() {
   const { fileId } = useParams();
@@ -50,14 +29,17 @@ export default function ScanResultDetail() {
   }, [fileId]);
 
   if (loading) {
-    return <p style={{ color: '#90a4ae' }}>Loading scan result...</p>;
+    return <div className="loading"><div className="spinner"></div> Loading scan result...</div>;
   }
 
   if (error) {
     return (
       <div>
-        <p style={{ color: '#ef5350' }}>{error}</p>
-        <Link to="/" style={{ color: '#4fc3f7' }}>← Back to files</Link>
+        <div className="alert alert-error">
+          <span className="alert-icon">⚠</span>
+          <div>{error}</div>
+        </div>
+        <Link to="/" className="btn-ghost">← Back to files</Link>
       </div>
     );
   }
@@ -67,37 +49,61 @@ export default function ScanResultDetail() {
 
   return (
     <div>
-      <Link to="/" style={{ color: '#4fc3f7', textDecoration: 'none', marginBottom: '24px', display: 'inline-block' }}>
+      <Link to="/" className="btn-ghost" style={{ marginBottom: '24px' }}>
         ← Back to files
       </Link>
 
-      <h2 style={{ color: '#e0e0e0', marginBottom: '8px' }}>{fileName}</h2>
-
-      <div style={{ marginBottom: '24px' }}>
-        <span style={{ color: '#90a4ae', marginRight: '12px' }}>Threat Level:</span>
-        <span style={badgeStyle(threatLevel)}>{threatLevel}</span>
+      <div className="page-header" style={{ marginTop: '16px' }}>
+        <h2>📄 {fileName}</h2>
       </div>
 
-      <p style={{ color: '#b0bec5', marginBottom: '32px', lineHeight: 1.6 }}>{summary}</p>
+      {/* Summary stats */}
+      <div className="scan-summary">
+        <div className="stat-card">
+          <div className="stat-value">
+            <span className={`threat-badge ${getThreatClass(threatLevel)}`}>
+              {threatLevel}
+            </span>
+          </div>
+          <div className="stat-label">Threat Level</div>
+        </div>
+        <div className="stat-card">
+          <div className="stat-value">{findings ? findings.length : 0}</div>
+          <div className="stat-label">Findings</div>
+        </div>
+        <div className="stat-card">
+          <div className="stat-value" style={{ fontSize: '1rem' }}>
+            {scanResult.scannedAt ? new Date(scanResult.scannedAt).toLocaleString() : '—'}
+          </div>
+          <div className="stat-label">Scanned At</div>
+        </div>
+      </div>
 
+      {/* Summary text */}
+      <div className="glass-card-sm" style={{ marginBottom: '32px' }}>
+        <p style={{ color: 'var(--text-secondary)', lineHeight: 1.7, margin: 0 }}>{summary}</p>
+      </div>
+
+      {/* Results */}
       {(!findings || findings.length === 0) ? (
-        <div style={{ textAlign: 'center', padding: '32px', background: '#1b5e20', borderRadius: '12px' }}>
-          <p style={{ margin: 0, fontSize: '1.1rem', color: '#a5d6a7' }}>✓ No threats detected</p>
-          <p style={{ margin: '8px 0 0', color: '#81c784', fontSize: '0.9rem' }}>This log file appears clean.</p>
+        <div className="clean-state">
+          <span className="check-icon">✅</span>
+          <h3>No threats detected</h3>
+          <p>This log file appears clean. No suspicious patterns were found.</p>
         </div>
       ) : (
         <div>
-          <h3 style={{ color: '#90a4ae', marginBottom: '16px' }}>Findings ({findings.length})</h3>
+          <h3 style={{ color: 'var(--text-secondary)', marginBottom: '16px', fontWeight: 600 }}>
+            🔍 Findings ({findings.length})
+          </h3>
           {findings.map((f, idx) => (
-            <div key={idx} style={findingStyle}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                <span style={{ color: '#ff7043', fontWeight: 600 }}>{f.keyword}</span>
-                <span style={{ color: '#607d8b', fontSize: '0.85rem' }}>Line {f.lineNumber}</span>
+            <div key={idx} className="finding-card">
+              <div className="finding-header">
+                <span className="finding-keyword">⚡ {f.keyword}</span>
+                <span className="finding-line">Line {f.lineNumber}</span>
               </div>
-              <p style={{ margin: '0 0 8px', color: '#b0bec5', fontSize: '0.9rem' }}>{f.description}</p>
-              <code style={{ display: 'block', padding: '8px 12px', background: '#0f1b2d', borderRadius: '4px', fontSize: '0.85rem', color: '#90a4ae', overflowX: 'auto' }}>
-                {f.lineContent}
-              </code>
+              <p className="finding-description">{f.description}</p>
+              <code className="finding-code">{f.lineContent}</code>
             </div>
           ))}
         </div>
