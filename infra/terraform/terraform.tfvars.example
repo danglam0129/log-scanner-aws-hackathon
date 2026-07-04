@@ -1,0 +1,20 @@
+# Required
+upload_bucket_name = "my-logscan-uploads-unique-name"
+
+# Optional overrides
+# aws_region               = "ap-southeast-1"
+# environment              = "dev"
+# project_name             = "log-threat-detection"
+# frontend_bucket_name     = ""
+# frontend_domain          = "log-scanner.cloudival.com"
+# route53_zone_id          = "Z0047063JX9ZJQL6MINC"
+# enable_cloudfront        = false
+# enable_cognito           = false
+# cognito_domain_prefix    = ""
+# detector_type            = "MOCK"
+# bedrock_model_id         = "anthropic.claude-3-haiku-20240307-v1:0"
+# lambda_memory            = 512
+# api_lambda_timeout       = 15
+# scanner_lambda_timeout   = 45
+# lambda_reserved_concurrency = null
+# frontend_certificate_arn = ""

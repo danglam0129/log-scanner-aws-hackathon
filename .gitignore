@@ -1,0 +1,37 @@
+# Lambda build artifacts
+lambda/target/
+
+# Frontend build artifacts
+frontend/dist/
+frontend/node_modules/
+
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment files
+.env
+*.env.local
+
+# Terraform
+*.tfvars
+*.tfvars.json
+infra/terraform/.terraform/
+infra/terraform/*.tfstate
+infra/terraform/*.tfstate.backup
+
+# Secrets
+*.pem
+*.key
+*.p12
+*.crt
+aws-credentials*
+
+# Logs
+*.log
+logs/
